@@ -7,6 +7,10 @@
 
 > 起因：Star 攒到 1000+ 之后，GitHub 自带的 Stars 页面基本没法用了 —— 找不着、搜不到、不能按语言筛。这个工具走官方 API 把数据全捞下来，落成能离线翻的表格。
 
+![界面截图](docs/screenshot.png)
+
+> 上图为 `--demo` 假数据渲染的效果，不是任何人的真实 Star 列表。
+
 ## 特性
 
 - **走官方 API**，自动翻页，不爬 HTML，不会触发风控
@@ -25,6 +29,9 @@
 ## 快速开始
 
 ```bash
+# 不想登录？先用内置假数据看看长什么样
+python stars.py --demo -o demo.csv --all
+
 gh auth login          # 只需一次
 
 # 方式一：直接指定用户名
@@ -57,6 +64,7 @@ update-stars.bat YOUR_NAME    REM 临时指定用户名
 | `--md` | 生成同名 Markdown 表格 |
 | `--html` | 生成同名可搜索 HTML |
 | `--from-csv FILE` | **不调 API**，直接读已有 CSV 重建 md/html |
+| `--demo` | 用内置假数据生成样例（截图 / 演示 / 无网络试跑，不调 API） |
 | `--max-desc N` | 描述截断长度（字符），默认 **500**；`0` = 不截断 |
 | `--sort` | 排序字段：`starred_at`(默认，倒序) / `stars` / `full_name` / `language` |
 
@@ -124,6 +132,8 @@ gh-stars/
 ├── .stars-user           # 本地用户名（gitignored）
 ├── LICENSE
 ├── README.md
+├── docs/
+│   └── screenshot.png    # README 里的界面截图
 └── stars.{csv,md,html}   # 生成的数据（gitignored）
 ```
 

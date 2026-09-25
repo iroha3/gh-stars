@@ -196,6 +196,129 @@ def write_html(rows: list[dict], out: Path, max_desc: int = 500) -> None:
     print(f"✅ HTML（{out.stat().st_size / 1024:.0f} KB，已内嵌数据）→ {out.resolve()}")
 
 
+def demo_rows() -> list[dict]:
+    """生成一份假数据，用于截图 / 演示 / 无网络时试跑（完全不访问 API）。
+
+    覆盖各种渲染情况：已归档、fork、空描述、无语言、超长描述、
+    几十个标签、不同协议和时间分布。
+    """
+    from datetime import datetime, timedelta
+
+    # (仓库, 语言, Star数, 描述, 标签, 已归档, 是fork, 协议, 收藏于几天前, 官网)
+    specs = [
+        ("octocat/awesome-selfhosted", "Python", 41200,
+         "A curated list of self-hostable services and tools. PRs welcome.",
+         "awesome-list selfhosted docker", False, False, "MIT", 3, "https://selfhosted.example.com"),
+        ("octocat/terminal-tools", "Rust", 9840,
+         "Fast, dependency-free CLI utilities for everyday terminal work.",
+         "cli rust terminal productivity", False, False, "Apache-2.0", 9, ""),
+        ("sample-labs/vector-db-bench", "Python", 3270,
+         "Benchmark harness for comparing open-source vector databases.",
+         "benchmark vector-database embeddings python", False, False, "MIT", 15, ""),
+        ("sample-labs/ui-kit", "TypeScript", 15600,
+         "Headless, accessible React components with zero runtime styles.",
+         "react typescript components accessibility", False, False, "MIT", 22, "https://uikit.example.com"),
+        ("demo-org/llm-from-scratch", "Jupyter Notebook", 27800,
+         "Build a small GPT from scratch, with careful math notes and no dependencies.",
+         "llm transformer tutorial notebook education", False, False, "MIT", 31, ""),
+        ("demo-org/zig-http", "Zig", 2410,
+         "Minimal HTTP/1.1 server in Zig. Educational, readable, fast.",
+         "zig http server networking", False, False, "MIT", 44, ""),
+        ("acme/gopls", "Go", 8730,
+         "Language server for Go. Editor-agnostic, batteries included.",
+         "go lsp editor tooling", False, False, "BSD-3-Clause", 52, ""),
+        ("acme/observability-stack", "Go", 1120,
+         "OpenTelemetry collector configs and dashboards that actually make sense.",
+         "observability opentelemetry monitoring grafana", False, False, "Apache-2.0", 61, ""),
+        ("moonlight/data-pipeline", "Python", 4390,
+         "Typed, testable ETL pipelines with a tiny API surface.",
+         "etl pipeline data-engineering typing", False, False, "MIT", 73, ""),
+        ("moonlight/old-experiments", "C++", 12,
+         "Random experiments from 2019. Kept for nostalgia.",
+         "", True, False, "Unlicense", 88, ""),
+        ("orchard/wasm-runtime", "Rust", 33400,
+         "A small, embeddable WebAssembly runtime.",
+         "wasm runtime rust embedded sandbox", False, False, "Apache-2.0", 96, ""),
+        ("orchard/css-scope", "JavaScript", 780,
+         "Scope CSS without a build step. 2KB, no deps.",
+         "css javascript shadow-dom browser", False, False, "MIT", 104, ""),
+        ("pixel-co/screenshot-diff", "Swift", 1860,
+         "Pixel-perfect visual regression testing for iOS.",
+         "ios swift testing visual-regression", False, False, "MIT", 118, ""),
+        ("pixel-co/design-tokens", "TypeScript", 520,
+         "Design tokens as code, exportable to CSS / Swift / Kotlin.",
+         "design-tokens typescript css", False, False, "MIT", 129, "https://tokens.example.com"),
+        ("northwind/sql-formatter", "Ruby", 6400,
+         "Opinionated SQL formatter with dialect support.",
+         "sql formatter ruby postgres", False, False, "MIT", 141, ""),
+        ("northwind/legacy-monolith", "Java", 96,
+         "Split out of our monolith. Public for transparency.",
+         "", False, False, "Apache-2.0", 155, ""),
+        ("octocat/dotfiles", "Shell", 21800,
+         "My dotfiles. Copy-paste at your own risk.",
+         "dotfiles shell zsh", False, True, "MIT", 166, ""),
+        ("demo-org/awesome-llm-agents", "Python", 55300,
+         "A gigantic, only lightly maintained list of LLM agent frameworks, papers, prompts, "
+         "toolchains, benchmarks and assorted links. Contributions are welcome, but please read "
+         "the contributing guide before opening a PR, as the maintainers are volunteers and "
+         "cannot review large diffs quickly. See the appendix for a full taxonomy.",
+         "llm agents awesome-list papers prompts toolchains benchmark", False, False, "CC0-1.0", 171, ""),
+        ("sample-labs/kotlin-flows-demo", "Kotlin", 340,
+         "Teaching material for Kotlin Flow and coroutines.",
+         "kotlin coroutines flow android", False, False, "Apache-2.0", 183, ""),
+        ("acme/vue-datagrid", "Vue", 7200,
+         "Virtualized data grid for Vue 3. 60fps at 100k rows.",
+         "vue datagrid virtual-scroll table", False, False, "MIT", 192, "https://datagrid.example.com"),
+        ("moonlight/haskell-parser", "Haskell", 1450,
+         "Parser combinators explained with a JSON parser you can read in one sitting.",
+         "haskell parser json tutorial", False, False, "BSD-3-Clause", 205, ""),
+        ("orchard/elixir-chat", "Elixir", 3900,
+         "Realtime chat reference app built on Phoenix LiveView.",
+         "elixir phoenix liveview websocket", False, False, "MIT", 219, ""),
+        ("northwind/lua-neovim-config", "Lua", 880,
+         "A minimal, well-commented Neovim config.",
+         "neovim lua configuration", False, False, "MIT", 233, ""),
+        ("pixel-co/csharp-grpc", "C#", 2760,
+         "Production-ready gRPC templates for .NET.",
+         "dotnet grpc templates csharp", False, False, "MIT", 248, ""),
+        ("demo-org/html-report", "HTML", 430,
+         "Single-file HTML reports from CSV. No server, no tracking.",
+         "html report csv offline single-file", False, False, "MIT", 262, ""),
+        ("sample-labs/sqlite-ext", "C", 5100,
+         "Useful SQLite extensions in a single amalgamation file.",
+         "sqlite c extension embedded", False, False, "MIT", 279, ""),
+        ("acme/deprecated-sdk", "JavaScript", 6800,
+         "Deprecated. Use @acme/sdk-next instead.",
+         "deprecated sdk javascript", True, False, "MIT", 298, ""),
+        ("octocat/cobol-modern", "COBOL", 1900,
+         "Modern COBOL examples. Yes, really.",
+         "cobol legacy mainframe", False, False, "MIT", 315, ""),
+        ("demo-org/mystery-repo", "", 0,
+         "", "", False, False, "", 330, ""),
+    ]
+
+    base = datetime(2026, 9, 20, 14, 30, 0)
+    rows = []
+    for i, (name, lang, star, desc, topics, arch, fork, lic, days, home) in enumerate(specs):
+        starred = base - timedelta(days=days, minutes=i * 17)
+        rows.append({
+            "starred_at": starred.strftime("%Y-%m-%d %H:%M:%S"),
+            "full_name": name,
+            "language": lang,
+            "stars": star,
+            "description": clean_text(desc),
+            "topics": clean_text(topics),
+            "url": f"https://github.com/{name}",
+            "homepage": home,
+            "archived": "是" if arch else "",
+            "fork": "是" if fork else "",
+            "license": lic,
+            "created_at": (starred - timedelta(days=200 + (i * 53) % 1200)).strftime("%Y-%m-%d"),
+            "pushed_at": (starred - timedelta(days=(i * 7) % 90)).strftime("%Y-%m-%d"),
+        })
+    return rows
+
+
 def main() -> None:
     # Windows 控制台默认 GBK，强制 UTF-8 输出，避免中文报错乱码
     for stream in (sys.stdout, sys.stderr):
@@ -222,6 +345,11 @@ def main() -> None:
     ap.add_argument("--html", action="store_true", help="同时生成可搜索的单文件 HTML")
     ap.add_argument("--all", action="store_true", help="= --md --html")
     ap.add_argument(
+        "--demo",
+        action="store_true",
+        help="用内置假数据生成样例（截图/演示用，不调 API）",
+    )
+    ap.add_argument(
         "--max-desc",
         type=int,
         default=500,
@@ -240,6 +368,9 @@ def main() -> None:
         rows = read_csv(args.from_csv)
         if not rows:
             sys.exit("CSV 里没有数据。")
+    elif args.demo:
+        rows = demo_rows()
+        print(f"使用内置演示数据（{len(rows)} 条假仓库，不访问 API）", file=sys.stderr)
     else:
         user = resolve_user(args.user)
         path = (

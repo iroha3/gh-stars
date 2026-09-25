@@ -11,3 +11,8 @@ stars.html
 *-stars.csv
 *-stars.md
 *-stars.html
+
+# 演示产物（docs/screenshot.png 要提交，这几个是生成出来的）
+docs/demo.csv
+docs/demo.md
+docs/demo.html
