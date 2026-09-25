@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+
+# 生成的数据快照（含个人 star 记录）。想把自己那份一起提交，就注释掉下面三行。
+*-stars.csv
+*-stars.md
+*-stars.html
