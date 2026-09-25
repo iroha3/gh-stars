@@ -13,6 +13,8 @@
 
 默认导出对象依次为：--user 参数 > 同目录 .stars-user 文件 > 当前登录账号。
 """
+from __future__ import annotations  # 让 str | None 这类注解在 3.8 / 3.9 上也能用
+
 import argparse
 import csv
 import json
