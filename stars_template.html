@@ -72,6 +72,7 @@
   .desc{overflow-wrap:anywhere}
   .topics{margin-top:4px; display:flex; flex-wrap:wrap; gap:4px}
   .tag{background:var(--pill); color:var(--muted); border-radius:999px; padding:1px 7px; font-size:11px}
+  .more{font-size:12px; margin-left:6px; white-space:nowrap}
   .lang{white-space:nowrap; color:var(--muted)}
   .st{color:var(--star); font-variant-numeric:tabular-nums}
   .date{white-space:nowrap; color:var(--muted); font-size:12px}
@@ -129,6 +130,7 @@
 (function(){
   "use strict";
   const DATA = JSON.parse(document.getElementById("stars-data").textContent);
+  const MAX_DESC = __MAX_DESC__;   // 描述超过这个长度就折叠，点“展开”看全文
 
   const $ = id => document.getElementById(id);
   const q = $("q"), langSel = $("lang"), yearSel = $("year"), stateSel = $("state");
@@ -156,6 +158,17 @@
       const re = new RegExp("(" + needle.replace(/[.*+?^${}()|[\]\\]/g,"\\$&") + ")", "ig");
       return safe.replace(re, "<mark>$1</mark>");
     }catch(_){ return safe; }
+  }
+
+  // 描述单元格：过长时默认折叠，可点击展开全文
+  function descHtml(r, needle){
+    const full = r.description || "";
+    if(!MAX_DESC || full.length <= MAX_DESC) return hl(full, needle);
+    const n = full.length.toLocaleString("en-US");
+    const label = `展开 (${n} 字)`;
+    return `<span class="dshort">${hl(full.slice(0, MAX_DESC), needle)}…</span>`
+         + `<span class="dfull" hidden>${hl(full, needle)}</span>`
+         + `<a href="#" class="more" data-label="${label}">${label}</a>`;
   }
 
   let sortKey = "starred_at", sortDir = -1;
@@ -215,7 +228,7 @@
         + `</td>`
         + `<td class="lang">${esc(r.language || "—")}</td>`
         + `<td class="num st">${Number(r.stars).toLocaleString("en-US")}</td>`
-        + `<td class="desc col-desc">${hl(r.description || "", needle)}</td>`
+        + `<td class="desc col-desc">${descHtml(r, needle)}</td>`
         + `<td class="col-topics"><div class="topics">${tags}</div></td>`
         + `<td class="date col-created">${esc((r.starred_at||"").slice(0,10))}</td>`
         + `<td><a href="${esc(r.homepage || r.url)}" target="_blank" rel="noopener">${r.homepage ? "官网" : "GitHub"}</a></td>`
@@ -234,6 +247,19 @@
     });
     render();
   }
+
+  // 展开 / 收起长描述
+  tbody.addEventListener("click", e => {
+    const btn = e.target.closest(".more");
+    if(!btn) return;
+    e.preventDefault();
+    const td = btn.closest("td");
+    const short = td.querySelector(".dshort"), full = td.querySelector(".dfull");
+    const opening = full.hidden;
+    full.hidden = !opening;
+    short.hidden = opening;
+    btn.textContent = opening ? "收起" : btn.dataset.label;
+  });
 
   // 事件绑定
   q.addEventListener("input", render);

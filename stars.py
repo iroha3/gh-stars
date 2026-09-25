@@ -14,10 +14,31 @@
 import argparse
 import csv
 import json
+import re
 import shutil
 import subprocess
 import sys
 from pathlib import Path
+
+# \s 在 str 模式下会匹配 Unicode 空白，包括全角空格 U+3000 和 NBSP U+00A0
+_WS = re.compile(r"\s+")
+
+
+def clean_text(text) -> str:
+    """折叠所有空白字符为单个半角空格并 strip。
+
+    有些仓库会在描述里塞几百上千个全角空格（U+3000）或换行，
+    不处理的话在表格里会撑出一大片空白。
+    """
+    return _WS.sub(" ", str(text or "")).strip()
+
+
+def clip(text, limit: int) -> str:
+    """按字符数截断并加省略号；limit <= 0 表示不截断。"""
+    text = str(text or "")
+    if limit and limit > 0 and len(text) > limit:
+        return text[:limit].rstrip() + "…"
+    return text
 
 COLUMNS = [
     ("starred_at", "收藏时间"),
@@ -85,8 +106,8 @@ def to_row(item: dict) -> dict:
         "full_name": repo.get("full_name", ""),
         "language": repo.get("language") or "",
         "stars": repo.get("stargazers_count", 0),
-        "description": (repo.get("description") or "").replace("\r", " ").replace("\n", " "),
-        "topics": " ".join(repo.get("topics") or []),
+        "description": clean_text(repo.get("description")),
+        "topics": clean_text(" ".join(repo.get("topics") or [])),
         "url": repo.get("html_url", ""),
         "homepage": repo.get("homepage") or "",
         "archived": "是" if repo.get("archived") else "",
@@ -117,11 +138,15 @@ def read_csv(path: str) -> list[dict]:
                 r["stars"] = int(r.get("stars") or 0)
             except (TypeError, ValueError):
                 r["stars"] = 0
+            # 旧版 CSV 可能留着未折叠的空白（如成百上千个全角空格），这里补洗一遍
+            for k in ("description", "topics"):
+                if k in r:
+                    r[k] = clean_text(r[k])
             rows.append(r)
     return rows
 
 
-def write_html(rows: list[dict], out: Path) -> None:
+def write_html(rows: list[dict], out: Path, max_desc: int = 500) -> None:
     """把数据内嵌进单文件 HTML（双击即可离线使用）。"""
     tpl_path = Path(__file__).with_name("stars_template.html")
     if not tpl_path.exists():
@@ -138,9 +163,15 @@ def write_html(rows: list[dict], out: Path) -> None:
         }
         for r in rows
     ]
-    # 内嵌 JSON：转义 </ 防止提前终止 <script> 标签
+    # 内嵌 JSON：转义 </ 防止提前终止 <script> 标签。
+    # 注意：HTML 里保留完整描述，由前端 JS 截断显示 + 点击展开，
+    # 所以只有这一步会写入 __MAX_DESC__。
     blob = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
-    html = tpl_path.read_text(encoding="utf-8").replace("__STARS_DATA__", blob)
+    html = (
+        tpl_path.read_text(encoding="utf-8")
+        .replace("__STARS_DATA__", blob)
+        .replace("__MAX_DESC__", str(max_desc))
+    )
     out.write_text(html, encoding="utf-8")
     print(f"✅ HTML（{out.stat().st_size / 1024:.0f} KB，已内嵌数据）→ {out.resolve()}")
 
@@ -167,6 +198,12 @@ def main() -> None:
     ap.add_argument("--md", action="store_true", help="同时生成同名 .md 表格")
     ap.add_argument("--html", action="store_true", help="同时生成可搜索的单文件 HTML")
     ap.add_argument("--all", action="store_true", help="= --md --html")
+    ap.add_argument(
+        "--max-desc",
+        type=int,
+        default=500,
+        help="描述截断长度（字符），默认 500；填 0 表示不截断（CSV/Markdown 生效，HTML 可点击展开全文）",
+    )
     ap.add_argument(
         "--sort",
         choices=["starred_at", "stars", "full_name", "language"],
@@ -204,7 +241,7 @@ def main() -> None:
         w = csv.DictWriter(f, fieldnames=[k for k, _ in COLUMNS], extrasaction="ignore")
         w.writerow({k: label for k, label in COLUMNS})
         for r in rows:
-            w.writerow(r)
+            w.writerow({**r, "description": clip(r["description"], args.max_desc)})
     print(f"✅ {len(rows)} 条已写入 {out.resolve()}")
 
     if args.md or args.all:
@@ -214,13 +251,14 @@ def main() -> None:
             f.write("| " + " | ".join(label for _, label in COLUMNS) + " |\n")
             f.write("|" + "---|" * len(COLUMNS) + "\n")
             for r in rows:
-                cells = [str(r[k]).replace("|", "\\|") for k, _ in COLUMNS]
+                row = {**r, "description": clip(r["description"], args.max_desc)}
+                cells = [str(row[k]).replace("|", "\\|") for k, _ in COLUMNS]
                 cells[1] = f"[{r['full_name']}]({r['url']})"
                 f.write("| " + " | ".join(cells) + " |\n")
         print(f"✅ Markdown 表格已写入 {md.resolve()}")
 
     if args.html or args.all:
-        write_html(rows, out.with_suffix(".html"))
+        write_html(rows, out.with_suffix(".html"), args.max_desc)
 
 
 if __name__ == "__main__":
