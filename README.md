@@ -1,5 +1,8 @@
 # gh-stars
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Python 3.8+](https://img.shields.io/badge/python-3.8%2B-blue.svg)](https://www.python.org/)
+
 把 GitHub Star 的项目导出成 **CSV / Markdown / 可搜索的单文件 HTML**。
 
 > 起因：Star 攒到 1000+ 之后，GitHub 自带的 Stars 页面基本没法用了 —— 找不着、搜不到、不能按语言筛。这个工具走官方 API 把数据全捞下来，落成能离线翻的表格。
@@ -119,6 +122,7 @@ gh-stars/
 ├── stars_template.html   # HTML 模板，占位符 __STARS_DATA__ / __MAX_DESC__
 ├── update-stars.bat      # Windows 一键刷新
 ├── .stars-user           # 本地用户名（gitignored）
+├── LICENSE
 ├── README.md
 └── stars.{csv,md,html}   # 生成的数据（gitignored）
 ```
@@ -127,3 +131,7 @@ gh-stars/
 
 - 导出别人账号时只能拿到**公开** Star。导出自己的私有 Star 需要 token 带 `user` 权限：`gh auth refresh -h github.com -s user`
 - Windows 上 `gh api /user/starred` 直接在 Git Bash 里跑会被 MSYS 把路径改写成 `C:/Program Files/Git/...`，所以脚本里用 Python 的 `subprocess` 调用、不经过 shell。手动测试时把开头的 `/` 去掉即可。
+
+## License
+
+[MIT](LICENSE) © iroha3
