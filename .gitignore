@@ -1,7 +1,13 @@
 __pycache__/
 *.pyc
 
-# 生成的数据快照（含个人 star 记录）。想把自己那份一起提交，就注释掉下面三行。
+# 本地配置：里面是你的 GitHub 用户名，不要提交
+.stars-user
+
+# 生成的数据快照（含个人 star 记录）。想把自己那份一起提交，就注释掉下面几行。
+stars.csv
+stars.md
+stars.html
 *-stars.csv
 *-stars.md
 *-stars.html

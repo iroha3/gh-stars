@@ -4,12 +4,14 @@
 依赖：已登录的 gh CLI (gh auth login)
 
 用法:
-  python stars.py                        # 导出当前登录账号的 star -> github-stars.csv
-  python stars.py --user plasma-blue     # 导出任意用户的公开 star
+  python stars.py                        # 导出 star -> stars.csv
+  python stars.py --user some-name       # 导出指定用户的公开 star
   python stars.py --account other-acct   # 指定用哪个 gh 账号的 token
-  python stars.py --md                   # 额外生成 github-stars.md
+  python stars.py --all                  # 同时生成 .md 和 .html
   python stars.py -o my-stars.csv        # 指定输出文件名
   python stars.py --sort stars           # 按 star 数排序（默认按收藏时间倒序）
+
+默认导出对象依次为：--user 参数 > 同目录 .stars-user 文件 > 当前登录账号。
 """
 import argparse
 import csv
@@ -39,6 +41,22 @@ def clip(text, limit: int) -> str:
     if limit and limit > 0 and len(text) > limit:
         return text[:limit].rstrip() + "…"
     return text
+
+
+def resolve_user(cli_user: str | None) -> str | None:
+    """确定要导出谁：命令行 > 同目录的 .stars-user 配置文件 > 当前登录账号。
+
+    .stars-user 是 gitignored 的，把自己的用户名写在里面就不用每次带 --user，
+    也不必把用户名硬编码进脚本或批处理（方便开源）。
+    """
+    if cli_user:
+        return cli_user.strip()
+    cfg = Path(__file__).with_name(".stars-user")
+    if cfg.exists():
+        first = cfg.read_text(encoding="utf-8").splitlines()
+        if first and first[0].strip():
+            return first[0].strip()
+    return None
 
 COLUMNS = [
     ("starred_at", "收藏时间"),
@@ -189,7 +207,10 @@ def main() -> None:
 
     ap = argparse.ArgumentParser(description="导出 GitHub Star 列表")
     ap.add_argument("-o", "--output", default="github-stars.csv", help="CSV 输出路径")
-    ap.add_argument("--user", help="要导出的用户名（默认：当前登录账号）")
+    ap.add_argument(
+        "--user",
+        help="要导出的用户名；省略时依次尝试 .stars-user 配置文件、当前登录账号",
+    )
     ap.add_argument(
         "--from-csv",
         help="不从 API 拉取，直接读已有 CSV 重建 md/html（改模板时很省事）",
@@ -218,12 +239,13 @@ def main() -> None:
         if not rows:
             sys.exit("CSV 里没有数据。")
     else:
+        user = resolve_user(args.user)
         path = (
-            f"/users/{args.user}/starred?per_page=100"
-            if args.user
+            f"/users/{user}/starred?per_page=100"
+            if user
             else "/user/starred?per_page=100"
         )
-        print(f"正在拉取 {path} ...", file=sys.stderr)
+        print(f"正在拉取 {user or '当前登录账号'} 的 star ...", file=sys.stderr)
         items = gh_api(path, args.account)
         if not items:
             sys.exit("0 条结果。检查一下用户名，或者这个账号确实没 star。")
