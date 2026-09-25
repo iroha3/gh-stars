@@ -97,8 +97,17 @@ def to_row(item: dict) -> dict:
     }
 
 
+def _truthy(v) -> bool:
+    """兼容 CSV 里可能出现的多种真值写法。"""
+    return str(v).strip().lower() in ("是", "true", "yes", "1", "y")
+
+
 def read_csv(path: str) -> list[dict]:
-    """把之前导出的 CSV 读回内部结构（表头是中文，这里反向映射）。"""
+    """把之前导出的 CSV 读回内部结构（表头是中文，这里反向映射）。
+
+    注意：archived / fork 保持 CSV 里的原始字符串（如 "是"/""），
+    不要转成 bool，否则回写 CSV 会变成 True/False 而污染数据。
+    """
     label2key = {label: key for key, label in COLUMNS}
     rows = []
     with open(path, encoding="utf-8-sig", newline="") as f:
@@ -108,8 +117,6 @@ def read_csv(path: str) -> list[dict]:
                 r["stars"] = int(r.get("stars") or 0)
             except (TypeError, ValueError):
                 r["stars"] = 0
-            r["archived"] = r.get("archived") == "是"
-            r["fork"] = r.get("fork") == "是"
             rows.append(r)
     return rows
 
@@ -122,7 +129,15 @@ def write_html(rows: list[dict], out: Path) -> None:
         return
 
     keys = [k for k, _ in COLUMNS] + ["created_at", "pushed_at"]
-    payload = [{k: r.get(k, "") for k in keys} for r in rows]
+    payload = [
+        {
+            **{k: r.get(k, "") for k in keys},
+            # JSON 里给真正的 bool，前端 JS 才能直接做真值判断
+            "archived": _truthy(r.get("archived")),
+            "fork": _truthy(r.get("fork")),
+        }
+        for r in rows
+    ]
     # 内嵌 JSON：转义 </ 防止提前终止 <script> 标签
     blob = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
     html = tpl_path.read_text(encoding="utf-8").replace("__STARS_DATA__", blob)
